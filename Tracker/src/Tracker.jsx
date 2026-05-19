@@ -333,8 +333,8 @@ function CreateTrackerModal({ onSave, onClose }) {
       gradient: gradient.value,
       glow: gradient.glow,
       quote: quote || QUOTES[Math.floor(Math.random() * QUOTES.length)],
-      startDate: new Date(startDate).toISOString(),
-      longestStreak: getStreakDays(new Date(startDate).toISOString()),
+      startDate: new Date().toISOString(),
+      longestStreak: 0,
     });
   };
 
