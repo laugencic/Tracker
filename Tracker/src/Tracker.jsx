@@ -180,6 +180,45 @@ function RelapseModal({ tracker, onConfirm, onCancel }) {
   );
 }
 
+function DeleteModal({ tracker, onConfirm, onCancel }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+    >
+      <div
+        className="rounded-3xl p-8 max-w-sm w-full mx-4"
+        style={{ background: "rgba(15,15,25,0.95)", border: "1px solid rgba(255,255,255,0.1)" }}
+      >
+        <div className="text-4xl text-center mb-4">🗑️</div>
+        <h3 className="text-xl font-bold text-white text-center mb-3">Delete tracker?</h3>
+        <p className="text-gray-300 text-sm text-center leading-relaxed mb-2">
+          You're about to delete <span className="text-white font-semibold">"{tracker.title}"</span>.
+        </p>
+        <p className="text-gray-400 text-xs text-center mb-6">
+          All progress and streak history for this tracker will be permanently removed. This cannot be undone.
+        </p>
+        <div className="space-y-3">
+          <button
+            className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all"
+            style={{ background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.4)" }}
+            onClick={onConfirm}
+          >
+            Yes, delete it
+          </button>
+          <button
+            className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+            onClick={onCancel}
+          >
+            Keep it
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CircularProgress({ days, max = 90, glow }) {
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
@@ -209,7 +248,7 @@ function CircularProgress({ days, max = 90, glow }) {
   );
 }
 
-function TrackerCard({ tracker, onRelapse, onClick }) {
+function TrackerCard({ tracker, onRelapse, onClick, onDelete }) {
   const [time, setTime] = useState(getStreakTime(tracker.startDate));
 
   useEffect(() => {
@@ -299,19 +338,34 @@ function TrackerCard({ tracker, onRelapse, onClick }) {
           )}
         </div>
 
-        <button
-          className="mt-4 w-full py-2 rounded-xl text-xs font-medium transition-all"
-          style={{
-            background: "rgba(239,68,68,0.1)",
-            border: "1px solid rgba(239,68,68,0.2)",
-            color: "rgba(239,68,68,0.7)",
-          }}
-          onClick={e => { e.stopPropagation(); onRelapse(tracker); }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.2)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; }}
-        >
-          Reset streak
-        </button>
+        <div className="mt-4 flex gap-2">
+          <button
+            className="flex-1 py-2 rounded-xl text-xs font-medium transition-all"
+            style={{
+              background: "rgba(239,68,68,0.1)",
+              border: "1px solid rgba(239,68,68,0.2)",
+              color: "rgba(239,68,68,0.7)",
+            }}
+            onClick={e => { e.stopPropagation(); onRelapse(tracker); }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.2)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; }}
+          >
+            Reset streak
+          </button>
+          <button
+            className="py-2 px-3 rounded-xl text-xs font-medium transition-all"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "rgba(255,255,255,0.4)",
+            }}
+            onClick={e => { e.stopPropagation(); onDelete(tracker); }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "rgba(255,255,255,0.4)"; }}
+          >
+            🗑️
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -622,6 +676,7 @@ export default function App() {
   const [selectedTracker, setSelectedTracker] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [relapseTarget, setRelapseTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [milestone, setMilestone] = useState(null);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const lastMilestones = useRef({});
@@ -666,6 +721,18 @@ export default function App() {
     setRelapseTarget(null);
   };
 
+  const handleDelete = (tracker) => setDeleteTarget(tracker);
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    setTrackers(prev => prev.filter(t => t.id !== deleteTarget.id));
+    if (selectedTracker?.id === deleteTarget.id) {
+      setView("home");
+      setSelectedTracker(null);
+    }
+    setDeleteTarget(null);
+  };
+
   const handleCreate = (data) => {
     setTrackers(prev => [...prev, data]);
     setShowCreate(false);
@@ -702,6 +769,7 @@ export default function App() {
 
       {milestone && <MilestoneOverlay tracker={milestone} onClose={() => setMilestone(null)} />}
       {relapseTarget && <RelapseModal tracker={relapseTarget} onConfirm={confirmRelapse} onCancel={() => setRelapseTarget(null)} />}
+      {deleteTarget && <DeleteModal tracker={deleteTarget} onConfirm={confirmDelete} onCancel={() => setDeleteTarget(null)} />}
       {showCreate && <CreateTrackerModal onSave={handleCreate} onClose={() => setShowCreate(false)} />}
 
       {view === "detail" && selectedTracker ? (
@@ -738,7 +806,7 @@ export default function App() {
                 className="mt-8 rounded-2xl p-8 text-center"
                 style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}
               >
-                <div className="text-4xl mb-3"></div>
+                <div className="text-4xl mb-3">🌱</div>
                 <p className="text-white font-medium mb-1">Every journey starts here</p>
                 <p className="text-gray-500 text-sm">Tap the button below to create your first tracker and begin counting your days.</p>
               </div>
@@ -757,7 +825,7 @@ export default function App() {
           <div className="px-5 space-y-4 pb-8">
             {trackers.map((t, i) => (
               <div key={t.id} className="tracker-card" style={{ animationDelay: i * 0.08 + "s", animationFillMode: "both", opacity: 0 }}>
-                <TrackerCard tracker={t} onRelapse={handleRelapse} onClick={openDetail} />
+                <TrackerCard tracker={t} onRelapse={handleRelapse} onClick={openDetail} onDelete={handleDelete} />
               </div>
             ))}
 
